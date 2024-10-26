@@ -10,13 +10,19 @@ import { useEffect } from "react";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
-import HoldMenuProvider from "@/components/hold-menu/HoldMenuProvider";
+import HoldMenuProvider from "@/components/hold-menu/holdMenuContext";
 import { PaperProvider } from "react-native-paper";
+import {
+  useSafeAreaFrame,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import HoldMenuBackdrop from "@/components/hold-menu/HoldMenuBackdrop";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -35,11 +41,13 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <PaperProvider>
-        <HoldMenuProvider>
+        <HoldMenuProvider safeAreaInsets={insets}>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
           </Stack>
+
+          <HoldMenuBackdrop />
         </HoldMenuProvider>
       </PaperProvider>
     </ThemeProvider>
