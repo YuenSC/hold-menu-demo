@@ -1,8 +1,9 @@
 import React from "react";
-import { StyleSheet, View, ViewProps } from "react-native";
+import { StyleSheet, ViewProps } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { Portal, Text } from "react-native-paper";
+import { Portal } from "react-native-paper";
 import Animated, {
+  runOnJS,
   useAnimatedProps,
   useAnimatedReaction,
   useAnimatedStyle,
@@ -12,7 +13,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { CONTEXT_MENU_STATE, HOLD_ITEM_TRANSFORM_DURATION } from "./constants";
 import { useHoldMenuContext } from "./holdMenuContext";
-import HoldMenuBackdrop from "./HoldMenuBackdrop";
+import * as Haptics from "expo-haptics";
 
 export type HoldItemProps = {
   children: React.ReactNode;
@@ -34,9 +35,9 @@ const HoldItem = ({ children, items, menuAnchorPosition }: HoldItemProps) => {
 
   const longPress = Gesture.LongPress()
     .onStart(() => {
-      console.log("LongPress onStart");
       state.value = CONTEXT_MENU_STATE.ACTIVE;
       isActive.value = true;
+      runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Heavy);
     })
     .onFinalize(() => {});
 
