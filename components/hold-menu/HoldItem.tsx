@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { StyleSheet, ViewProps } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Portal } from "react-native-paper";
@@ -11,7 +11,12 @@ import Animated, {
   withDelay,
   withTiming,
 } from "react-native-reanimated";
-import { CONTEXT_MENU_STATE, HOLD_ITEM_TRANSFORM_DURATION } from "./constants";
+import {
+  CONTEXT_MENU_STATE,
+  HOLD_ITEM_SCALE_DOWN_DURATION,
+  HOLD_ITEM_SCALE_DOWN_VALUE,
+  HOLD_ITEM_TRANSFORM_DURATION,
+} from "./constants";
 import { useHoldMenuContext } from "./holdMenuContext";
 import * as Haptics from "expo-haptics";
 
@@ -28,18 +33,64 @@ export type HoldItemProps = {
     | "bottom-right";
 };
 
+const hapticResponse = () => {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+};
+
 const HoldItem = ({ children, items, menuAnchorPosition }: HoldItemProps) => {
   const { state, menuProps, safeAreaInsets } = useHoldMenuContext();
 
+  const containerRef = useRef<Animated.View>(null);
   const isActive = useSharedValue(false);
+  const isAnimationStarted = useSharedValue(false);
+  const didMeasureLayout = useSharedValue(false);
+  const itemScale = useSharedValue(1);
+
+  const scaleBack = () => {
+    "worklet";
+    itemScale.value = withTiming(1, {
+      duration: HOLD_ITEM_TRANSFORM_DURATION / 2,
+    });
+  };
+
+  const onCompletion = (finished?: boolean) => {
+    "worklet";
+    const isListValid = items && items.length > 0;
+    if (finished && isListValid) {
+      state.value = CONTEXT_MENU_STATE.ACTIVE;
+      isActive.value = true;
+      scaleBack();
+      runOnJS(hapticResponse)();
+    }
+    isAnimationStarted.value = false;
+  };
+
+  const scaleHold = () => {
+    "worklet";
+    itemScale.value = withTiming(
+      HOLD_ITEM_SCALE_DOWN_VALUE,
+      { duration: HOLD_ITEM_SCALE_DOWN_DURATION },
+      onCompletion
+    );
+  };
 
   const longPress = Gesture.LongPress()
     .onStart(() => {
-      state.value = CONTEXT_MENU_STATE.ACTIVE;
-      isActive.value = true;
-      runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Heavy);
+      scaleHold();
     })
     .onFinalize(() => {});
+
+  const animatedContainerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          scale: isActive.value
+            ? withTiming(1, { duration: HOLD_ITEM_TRANSFORM_DURATION })
+            : itemScale.value,
+        },
+      ],
+    };
+  });
 
   const animatedPortalStyle = useAnimatedStyle(() => {
     const animateOpacity = () =>
@@ -64,7 +115,11 @@ const HoldItem = ({ children, items, menuAnchorPosition }: HoldItemProps) => {
 
   return (
     <>
-      <GestureDetector gesture={longPress}>{children}</GestureDetector>
+      <GestureDetector gesture={longPress}>
+        <Animated.View ref={containerRef} style={[animatedContainerStyle]}>
+          {children}
+        </Animated.View>
+      </GestureDetector>
 
       <Portal>
         <Animated.View
