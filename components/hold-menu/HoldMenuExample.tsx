@@ -104,5 +104,7 @@ const styles = StyleSheet.create({
     width: "100%", // Change from 100 to '100%' to make it full width
     padding: 16,
     backgroundColor: "red",
+    borderRadius: 10,
+    aspectRatio: 1,
   },
 });
